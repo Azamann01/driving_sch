@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { business } from "@/config/business";
-import { isDemoMode } from "@/lib/dev-auth";
+import { isDashboardOpen } from "@/lib/access";
 
 export function SiteHeader() {
   return (
@@ -39,7 +39,7 @@ export function SiteHeader() {
           >
             {/* In a demo the dashboard is the thing worth showing off, so say
                 what it is rather than asking people to "log in" to it. */}
-            {isDemoMode() ? "See the owner dashboard" : "Owner login"}
+            {isDashboardOpen() ? "See the owner dashboard" : "Owner login"}
           </Link>
         </nav>
       </div>

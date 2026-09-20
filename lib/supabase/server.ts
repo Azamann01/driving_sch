@@ -4,14 +4,13 @@
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { isDashboardOpen } from "@/lib/dev-auth";
+import { isDashboardOpen } from "@/lib/access";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function createClient() {
-  // With the login bypassed (local convenience, or demo mode) there is no
-  // session, so row level security would refuse every dashboard query. Fall
-  // back to the service role. The key stays server side either way, but note
-  // demo mode does run in production: see lib/dev-auth.ts.
+  // With the dashboard open there is no session, so row level security would
+  // refuse every query. Fall back to the service role, which stays server
+  // side. See lib/access.ts: this applies in production by design.
   if (isDashboardOpen()) {
     return createAdminClient();
   }

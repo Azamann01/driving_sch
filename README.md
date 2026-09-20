@@ -85,9 +85,8 @@ around, but it must not be handed to learners yet.
 | `TWILIO_AUTH_TOKEN` | Twilio console | Same |
 | `TWILIO_FROM_NUMBER` | The Twilio number you bought, E.164, e.g. `+447700900000` | Same |
 
-Do **not** set `DEV_AUTH_BYPASS` in Vercel. It only ever applies when
-`NODE_ENV` is `development`, so it cannot unlock a deployed build, but
-there is no reason for it to be there.
+There is no variable to set for the dashboard login, because there isn't
+one by default. See "Running it as a demo" below.
 
 ### 4d. Point Stripe at the deployed webhook
 
@@ -102,25 +101,30 @@ a real endpoint:
 
 ## Running it as a demo
 
-To show the product to someone without handing out credentials, set
-`DEMO_MODE=true` and seed fictional data:
+**The dashboard opens without a login.** That is the default, with nothing to
+configure, because the point of this deployment is that someone being pitched
+to can click straight in. A banner across the top says it is a demo so it can
+never be mistaken for a real deployment.
+
+Seed the fictional data it shows with:
 
 ```
 node scripts/seed-demo.mjs
 ```
 
-That opens the dashboard to anyone with the URL, which is the point, and puts
-a demo banner across the top so it can never be mistaken for a real
-deployment. The seed script wipes and refills every table, so re-run it
-whenever a visitor has clicked things into a mess.
+The seed script wipes and refills every table, so re-run it whenever a
+visitor has clicked things into a mess.
+
+To put the login back, set `REQUIRE_LOGIN=true` and redeploy. The email and
+password sign in returns exactly as it was.
 
 The seeded phone numbers are all in Ofcom's `07700 900xxx` range, reserved
 for fiction and unable to reach a real person, and the emails are all
 `@example.com`. Lesson times are generated relative to when the script runs,
 so the dashboard always looks current.
 
-**Only use this where the data is made up.** With `DEMO_MODE` on there is no
-login at all, so anything in the database is public.
+**Only put fictional data in it.** With no login, anything in the database is
+public to anyone who has the URL.
 
 ## Before you take real customers
 

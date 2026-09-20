@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isDemoMode } from "@/lib/dev-auth";
+import { isDashboardOpen, requiresLogin } from "@/lib/access";
 
 // Deployment diagnostics. Reports only booleans and Vercel's own build
 // metadata, never a secret or a value, so it is safe to leave public.
@@ -12,8 +12,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   return NextResponse.json({
-    demoMode: isDemoMode(),
-    demoModeVarPresent: process.env.DEMO_MODE !== undefined,
+    dashboardOpen: isDashboardOpen(),
+    requiresLogin: requiresLogin(),
     nodeEnv: process.env.NODE_ENV,
     vercelEnv: process.env.VERCEL_ENV ?? null,
     commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? null,

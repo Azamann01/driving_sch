@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { isDashboardOpen } from "@/lib/dev-auth";
+import { isDashboardOpen } from "@/lib/access";
 
 // Refreshes the Supabase auth session on every request and keeps the
 // owner dashboard behind a login. The public site and booking form are
