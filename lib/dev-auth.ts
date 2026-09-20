@@ -11,15 +11,20 @@
 // banner whenever it is on, so a demo deployment can never be mistaken for a
 // real one.
 
+// Env vars are typed by hand into a dashboard, so tolerate the usual slips:
+// stray whitespace, capitals, and the quotes people add out of habit.
+function isTrue(value: string | undefined) {
+  return value?.trim().replace(/^["']|["']$/g, "").toLowerCase() === "true";
+}
+
 export function isDevBypass() {
   return (
-    process.env.NODE_ENV === "development" &&
-    process.env.DEV_AUTH_BYPASS === "true"
+    process.env.NODE_ENV === "development" && isTrue(process.env.DEV_AUTH_BYPASS)
   );
 }
 
 export function isDemoMode() {
-  return process.env.DEMO_MODE === "true";
+  return isTrue(process.env.DEMO_MODE);
 }
 
 export function isDashboardOpen() {
