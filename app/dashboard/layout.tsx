@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { business } from "@/config/business";
 import { DashboardNav } from "@/components/DashboardNav";
-import { isDevBypass } from "@/lib/dev-auth";
+import { isDashboardOpen, isDemoMode } from "@/lib/dev-auth";
 import { signOut } from "./actions";
 
 // Keeps the owner's pages out of search results. They are behind a login, but
@@ -17,7 +17,8 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const devBypass = isDevBypass();
+  const demoMode = isDemoMode();
+  const devBypass = isDashboardOpen();
   const supabase = await createClient();
   const {
     data: { user },
@@ -31,11 +32,18 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen flex-col">
-      {devBypass && (
-        <p className="bg-amber-100 px-6 py-2 text-center text-sm text-amber-900">
-          Login bypassed for local development. This never applies to a deployed
-          build, where you sign in as normal.
+      {demoMode ? (
+        <p className="bg-zinc-900 px-6 py-2 text-center text-sm text-white">
+          <span className="font-medium">Demo.</span> Every learner, lesson and
+          payment below is made up. Click anything you like.
         </p>
+      ) : (
+        devBypass && (
+          <p className="bg-amber-100 px-6 py-2 text-center text-sm text-amber-900">
+            Login bypassed for local development. This never applies to a
+            deployed build, where you sign in as normal.
+          </p>
+        )
       )}
       <header className="border-b border-zinc-200 bg-zinc-50">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-4">

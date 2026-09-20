@@ -100,6 +100,28 @@ a real endpoint:
 4. Copy the signing secret it gives you into `STRIPE_WEBHOOK_SECRET` in
    Vercel. It is a different secret from the one the CLI prints locally.
 
+## Running it as a demo
+
+To show the product to someone without handing out credentials, set
+`DEMO_MODE=true` and seed fictional data:
+
+```
+node scripts/seed-demo.mjs
+```
+
+That opens the dashboard to anyone with the URL, which is the point, and puts
+a demo banner across the top so it can never be mistaken for a real
+deployment. The seed script wipes and refills every table, so re-run it
+whenever a visitor has clicked things into a mess.
+
+The seeded phone numbers are all in Ofcom's `07700 900xxx` range, reserved
+for fiction and unable to reach a real person, and the emails are all
+`@example.com`. Lesson times are generated relative to when the script runs,
+so the dashboard always looks current.
+
+**Only use this where the data is made up.** With `DEMO_MODE` on there is no
+login at all, so anything in the database is public.
+
 ## Before you take real customers
 
 Staging is fine without these. A public, customer facing site is not.

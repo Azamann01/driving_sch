@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { business } from "@/config/business";
+import { isDemoMode } from "@/lib/dev-auth";
 
 export function SiteHeader() {
   return (
@@ -36,7 +37,9 @@ export function SiteHeader() {
             href="/dashboard"
             className="py-2.5 text-xs text-zinc-400 hover:text-zinc-700"
           >
-            Owner login
+            {/* In a demo the dashboard is the thing worth showing off, so say
+                what it is rather than asking people to "log in" to it. */}
+            {isDemoMode() ? "See the owner dashboard" : "Owner login"}
           </Link>
         </nav>
       </div>

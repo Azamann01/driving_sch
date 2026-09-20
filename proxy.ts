@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { isDevBypass } from "@/lib/dev-auth";
+import { isDashboardOpen } from "@/lib/dev-auth";
 
 // Refreshes the Supabase auth session on every request and keeps the
 // owner dashboard behind a login. The public site and booking form are
@@ -9,7 +9,7 @@ import { isDevBypass } from "@/lib/dev-auth";
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  if (isDevBypass()) {
+  if (isDashboardOpen()) {
     return response;
   }
 
