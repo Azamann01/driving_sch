@@ -61,7 +61,40 @@ async function insert(table, rows) {
   return data;
 }
 
-const hoursFromNow = (h) => new Date(Date.now() + h * 3_600_000).toISOString();
+// Lessons are placed relative to now so the dashboard never looks stale, but
+// a raw offset lands wherever the clock happens to be, and nobody books a
+// driving lesson at 01:50. Snap into teaching hours and onto the half hour.
+//
+// Driving schools genuinely run early and late (before work, after work), so
+// the window is wide: anything outside it moves to 09:00, same day if the
+// time was too early, next day if it was too late.
+const FIRST_LESSON_HOUR = 7;
+const LAST_LESSON_HOUR = 20;
+
+function lessonSlot(hoursAhead) {
+  const at = new Date(Date.now() + hoursAhead * 3_600_000);
+
+  at.setMinutes(at.getMinutes() < 30 ? 0 : 30, 0, 0);
+
+  if (at.getHours() < FIRST_LESSON_HOUR) {
+    at.setHours(9, 0, 0, 0);
+  } else if (at.getHours() >= LAST_LESSON_HOUR) {
+    at.setDate(at.getDate() + 1);
+    at.setHours(9, 0, 0, 0);
+  }
+
+  return at;
+}
+
+const slot = (hoursAhead) => lessonSlot(hoursAhead).toISOString();
+
+// End time follows from the lesson's own length, not a second offset, or a
+// clamped start and an unclamped end drift apart.
+const slotEnd = (hoursAhead, durationMinutes) => {
+  const end = lessonSlot(hoursAhead);
+  end.setMinutes(end.getMinutes() + durationMinutes);
+  return end.toISOString();
+};
 
 console.log("Clearing existing data...");
 // Order matters: children before parents, or the foreign keys complain.
@@ -118,26 +151,29 @@ const bookings = await insert("bookings", [
   {
     student_id: jordan.id, instructor_id: marcus.id, lesson_type_id: "standard-2hr",
     lesson_type_name: "Standard lesson (2 hours)", price_gbp: 66, duration_minutes: 120,
-    start_time: hoursFromNow(1.5), end_time: hoursFromNow(3.5),
+    start_time: slot(1.5), end_time: slotEnd(1.5, 120),
     status: "confirmed", payment_status: "unpaid",
   },
   {
     student_id: amelia.id, instructor_id: aisha.id, lesson_type_id: "mock-test",
     lesson_type_name: "Mock test", price_gbp: 45, duration_minutes: 60,
-    start_time: hoursFromNow(20), end_time: hoursFromNow(21),
+    // 10h rather than 20h: once the clamp moves a late slot to 09:00 the next
+    // morning, a 20h offset lands beyond 24h and the "within 24h" flag stops
+    // showing, which is one of the things worth demonstrating.
+    start_time: slot(10), end_time: slotEnd(10, 60),
     status: "confirmed", payment_status: "unpaid",
   },
   {
     student_id: samuel.id, instructor_id: marcus.id, lesson_type_id: "standard-1hr",
     lesson_type_name: "Standard lesson (1 hour)", price_gbp: 35, duration_minutes: 60,
-    start_time: hoursFromNow(72), end_time: hoursFromNow(73),
+    start_time: slot(72), end_time: slotEnd(72, 60),
     status: "confirmed", payment_status: "paid",
   },
   // A completed one, so the history is not empty either.
   {
     student_id: jordan.id, instructor_id: aisha.id, lesson_type_id: "standard-1hr",
     lesson_type_name: "Standard lesson (1 hour)", price_gbp: 35, duration_minutes: 60,
-    start_time: hoursFromNow(-48), end_time: hoursFromNow(-47),
+    start_time: slot(-48), end_time: slotEnd(-48, 60),
     status: "completed", payment_status: "paid",
   },
 ]);
