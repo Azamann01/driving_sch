@@ -52,12 +52,18 @@ export default async function DashboardLayout({
             >
               View public site
             </Link>
-            <span className="h-4 w-px bg-zinc-300" aria-hidden />
-            <form action={signOut}>
-              <button className="text-zinc-500 hover:text-zinc-900">
-                Sign out
-              </button>
-            </form>
+            {/* No session to end while the dashboard is open, so signing out
+                would do nothing but confuse whoever clicked it. */}
+            {!dashboardOpen && (
+              <>
+                <span className="h-4 w-px bg-zinc-300" aria-hidden />
+                <form action={signOut}>
+                  <button className="text-zinc-500 hover:text-zinc-900">
+                    Sign out
+                  </button>
+                </form>
+              </>
+            )}
           </div>
         </div>
         <DashboardNav />
