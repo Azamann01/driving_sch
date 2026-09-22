@@ -46,9 +46,10 @@ export default async function DashboardLayout({
             </span>
           </div>
           <div className="flex items-center gap-4 text-sm">
+            {/* py-3 makes this a 44px target; as bare text it was 20px. */}
             <Link
               href="/"
-              className="text-zinc-500 hover:text-zinc-900"
+              className="py-3 text-zinc-500 hover:text-zinc-900"
             >
               View public site
             </Link>
@@ -58,7 +59,7 @@ export default async function DashboardLayout({
               <>
                 <span className="h-4 w-px bg-zinc-300" aria-hidden />
                 <form action={signOut}>
-                  <button className="text-zinc-500 hover:text-zinc-900">
+                  <button className="py-3 text-zinc-500 hover:text-zinc-900">
                     Sign out
                   </button>
                 </form>
