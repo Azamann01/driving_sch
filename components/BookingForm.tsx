@@ -12,8 +12,11 @@ type SubmitState = "idle" | "submitting" | "success" | "error";
 // when you focus an input under 16px, and the learner then has to pinch back
 // out on every field. The 16px + py-2.5 combination also lands the control at
 // a 44px tap target. Desktop keeps the tighter 14px.
+// min-h-11 (44px) catches selects, which render a couple of pixels shorter
+// than inputs given the same padding. Dropped on sm and up, where the tighter
+// desktop sizing is fine.
 const fieldStyles =
-  "mt-1 w-full rounded-md border border-zinc-300 px-3 py-2.5 text-base focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 sm:py-2 sm:text-sm";
+  "mt-1 min-h-11 w-full rounded-md border border-zinc-300 px-3 py-2.5 text-base focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 sm:min-h-0 sm:py-2 sm:text-sm";
 
 export function BookingForm() {
   const [state, setState] = useState<SubmitState>("idle");
