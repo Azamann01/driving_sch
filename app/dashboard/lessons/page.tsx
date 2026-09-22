@@ -1,5 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { SubmitButton } from "@/components/SubmitButton";
+import { ContactLinks } from "@/components/ContactLinks";
+import {
+  formatLessonClock,
+  formatLessonTime,
+  lessonDayLabel,
+} from "@/lib/dates";
 import { sendReminder, updateBookingStatus } from "../actions";
 
 // How close a lesson has to be before the dashboard nudges you to text the
@@ -19,7 +25,7 @@ export default async function LessonsPage({
 
   const { data: bookings } = await supabase
     .from("bookings")
-    .select("*, instructors(name), students(name, phone)")
+    .select("*, instructors(name), students(name, phone, email)")
     .in("status", ["pending", "confirmed"])
     .order("start_time", { ascending: true });
 
@@ -31,10 +37,12 @@ export default async function LessonsPage({
   const now = Date.now();
 
   const lessons = bookings?.map((booking) => {
-    const hoursAway = (new Date(booking.start_time).getTime() - now) / 3_600_000;
+    const start = new Date(booking.start_time);
+    const hoursAway = (start.getTime() - now) / 3_600_000;
 
     return {
       booking,
+      dayLabel: lessonDayLabel(start, new Date(now)),
       dueNow: hoursAway > 0 && hoursAway <= DUE_NOW_HOURS,
       dueSoon: hoursAway > DUE_NOW_HOURS && hoursAway <= DUE_SOON_HOURS,
     };
@@ -64,7 +72,7 @@ export default async function LessonsPage({
           <p className="text-sm text-zinc-500">No upcoming lessons yet.</p>
         )}
 
-        {lessons?.map(({ booking, dueNow, dueSoon }) => {
+        {lessons?.map(({ booking, dayLabel, dueNow, dueSoon }) => {
           const markCompleted = updateBookingStatus.bind(null, booking.id, "completed");
           const markCancelled = updateBookingStatus.bind(null, booking.id, "cancelled");
           const markNoShow = updateBookingStatus.bind(null, booking.id, "no_show");
@@ -75,18 +83,18 @@ export default async function LessonsPage({
               key={booking.id}
               className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 p-4"
             >
-              <div>
+              <div className="min-w-0">
                 <p className="font-medium">
-                  {/* Pinned to UK time: the server runs UTC in production, so
-                      without this every lesson reads an hour early in summer. */}
-                  {new Date(booking.start_time).toLocaleString("en-GB", {
-                    timeZone: "Europe/London",
-                    weekday: "short",
-                    day: "numeric",
-                    month: "short",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {/* "Today, 15:30" beats "Mon 21 Sept, 15:30" when you are
+                      glancing at this between lessons. Times are pinned to UK
+                      time in lib/dates.ts, since the server runs UTC. */}
+                  {dayLabel ? (
+                    <>
+                      {dayLabel}, {formatLessonClock(new Date(booking.start_time))}
+                    </>
+                  ) : (
+                    formatLessonTime(new Date(booking.start_time))
+                  )}
                   {dueNow && (
                     <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-normal text-red-800">
                       within {DUE_NOW_HOURS}h
@@ -103,6 +111,13 @@ export default async function LessonsPage({
                   {booking.lesson_type_name}, £{booking.price_gbp}, with{" "}
                   {booking.instructors?.name ?? "an instructor"}
                 </p>
+                {/* If a lesson is in an hour and you are running late, this is
+                    the screen you are looking at, so the learner's number has
+                    to be on it. */}
+                <ContactLinks
+                  phone={booking.students?.phone}
+                  email={booking.students?.email}
+                />
                 <p className="text-xs text-zinc-400">
                   Payment: {booking.payment_status.replace("_", " ")}
                   {booking.reminder_sent_at

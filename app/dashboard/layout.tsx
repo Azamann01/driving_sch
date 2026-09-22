@@ -23,6 +23,22 @@ export default async function DashboardLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Counts on the tabs, so the owner can see where work is waiting without
+  // opening each screen in turn. head: true asks Postgres for the count only,
+  // so this costs three cheap queries rather than three fetches of the rows.
+  const [openEnquiries, unpaid, waiting] = await Promise.all([
+    supabase
+      .from("enquiries")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["new", "contacted"]),
+    supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .neq("payment_status", "paid")
+      .neq("status", "cancelled"),
+    supabase.from("waiting_list").select("id", { count: "exact", head: true }),
+  ]);
+
   if (!user && !dashboardOpen) {
     // Middleware already redirects to /dashboard/login for any other
     // dashboard route, this just lets the login page render without nav.
@@ -67,7 +83,13 @@ export default async function DashboardLayout({
             )}
           </div>
         </div>
-        <DashboardNav />
+        <DashboardNav
+          counts={{
+            "/dashboard/enquiries": openEnquiries.count ?? 0,
+            "/dashboard/payments": unpaid.count ?? 0,
+            "/dashboard/waiting-list": waiting.count ?? 0,
+          }}
+        />
       </header>
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">
         {children}

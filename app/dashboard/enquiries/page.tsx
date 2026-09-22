@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { SubmitButton } from "@/components/SubmitButton";
+import { ContactLinks } from "@/components/ContactLinks";
+import { timeAgo } from "@/lib/dates";
 import {
   convertEnquiryToBooking,
   moveEnquiryToWaitingList,
@@ -7,6 +9,9 @@ import {
 } from "../actions";
 
 export const metadata = { title: "New enquiries" };
+
+// Two days without a reply is where a warm enquiry starts going cold.
+const STALE_AFTER_HOURS = 48;
 
 export default async function EnquiriesPage() {
   const supabase = await createClient();
@@ -19,6 +24,12 @@ export default async function EnquiriesPage() {
       .order("created_at", { ascending: false }),
     supabase.from("instructors").select("id, name").eq("active", true),
   ]);
+
+  // Read once so every card is measured against the same instant.
+  const now = new Date();
+  const stale = (createdAt: string) =>
+    now.getTime() - new Date(createdAt).getTime() >
+    STALE_AFTER_HOURS * 3_600_000;
 
   return (
     <div>
@@ -56,15 +67,27 @@ export default async function EnquiriesPage() {
               className="rounded-lg border border-zinc-200 p-5"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
+                <div className="min-w-0">
                   <p className="font-medium">{enquiry.name}</p>
-                  <p className="text-sm text-zinc-500">
-                    {enquiry.email}, {enquiry.phone}, {enquiry.postcode}
+                  <ContactLinks phone={enquiry.phone} email={enquiry.email} />
+                  <p className="mt-1 text-sm text-zinc-500">
+                    {enquiry.postcode}
                   </p>
                 </div>
-                <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs capitalize text-zinc-600">
-                  {enquiry.status}
-                </span>
+                <div className="flex shrink-0 items-center gap-2">
+                  {/* Age, not just status: an enquiry nobody has answered for
+                      days is the one worth opening first. */}
+                  <span
+                    className={`text-xs ${
+                      stale(enquiry.created_at) ? "font-medium text-amber-700" : "text-zinc-400"
+                    }`}
+                  >
+                    {timeAgo(new Date(enquiry.created_at), now)}
+                  </span>
+                  <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs capitalize text-zinc-600">
+                    {enquiry.status}
+                  </span>
+                </div>
               </div>
 
               <p className="mt-3 text-sm">

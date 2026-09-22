@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { SubmitButton } from "@/components/SubmitButton";
+import { ContactLinks } from "@/components/ContactLinks";
+import { timeAgo } from "@/lib/dates";
 import { removeFromWaitingList } from "../actions";
 
 export const metadata = { title: "Waiting list" };
@@ -11,6 +13,8 @@ export default async function WaitingListPage() {
     .from("waiting_list")
     .select("*")
     .order("created_at", { ascending: true });
+
+  const now = new Date();
 
   return (
     <div>
@@ -34,12 +38,15 @@ export default async function WaitingListPage() {
               key={entry.id}
               className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 p-4"
             >
-              <div>
-                <p className="font-medium">{entry.name}</p>
-                <p className="text-sm text-zinc-500">
-                  {entry.email}, {entry.phone}
+              <div className="min-w-0">
+                <p className="font-medium">
+                  {entry.name}
+                  <span className="ml-2 text-xs font-normal text-zinc-400">
+                    waiting {timeAgo(new Date(entry.created_at), now)}
+                  </span>
                 </p>
-                <p className="text-sm text-zinc-600">
+                <ContactLinks phone={entry.phone} email={entry.email} />
+                <p className="mt-1 text-sm text-zinc-600">
                   {entry.lesson_type_name}
                   {entry.preferred_area && `, near ${entry.preferred_area}`}
                   {entry.preferred_times && `, ${entry.preferred_times}`}
