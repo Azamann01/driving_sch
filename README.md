@@ -4,6 +4,17 @@ Three screens: a public page, a booking screen, and an owner dashboard. See
 `driving_school_platform_plan.md` for the full reasoning behind the scope
 and technology choices, this file is just the practical setup steps.
 
+**Currently running as a showcase, not a live business system.** It is
+deployed at https://drivingsch-eta.vercel.app with the dashboard open to
+anyone (no login) and entirely fictional data, so it can be shown to
+prospective clients in one click. See "Running it as a demo" for how that
+works and how to switch it back to a protected system.
+
+Quickest way to check what a deployment actually has:
+`https://your-url/api/health` reports the commit it is running, whether the
+dashboard is open, and which environment variables reached it. Booleans and
+build metadata only, never a secret.
+
 ## 1. Edit your business details
 
 Open `config/business.ts` and fill in your school name, contact details,
@@ -18,19 +29,30 @@ You said you already have a Supabase project, so:
 1. In the Supabase dashboard, go to Project Settings, then API, and copy
    the Project URL and the anon public key.
 2. Copy `.env.local.example` to `.env.local` and paste those two values in.
-3. In the Supabase dashboard, go to the SQL Editor, paste the contents of
-   `supabase/migrations/0001_init.sql`, and run it. This creates every
-   table (instructors, students, enquiries, bookings, payments, waiting
-   list) and the row level security policies that keep the public site
-   able to submit enquiries but not read anyone else's data.
-4. Go to Authentication, then Users, and add yourself as a user with an
-   email and password. This is how you will sign in to the dashboard,
-   there is no public signup form by design, since this is a single
-   owner operated dashboard, not a multi user product yet.
+3. In the Supabase dashboard, go to the SQL Editor and run the migrations in
+   `supabase/migrations/` in order:
+   - `0001_init.sql` creates every table (instructors, students, enquiries,
+     bookings, payments, waiting list) and the row level security policies
+     that keep the public site able to submit enquiries but not read anyone
+     else's data.
+   - `0002_reminders.sql` adds `reminder_sent_at` to bookings, which the
+     lessons page uses to show when a reminder last went out.
+
+   If a column still reads as missing after running a migration, PostgREST
+   is caching the old schema: run `notify pgrst, 'reload schema';`. Check
+   the project ref in the SQL editor's URL matches the one in your
+   `NEXT_PUBLIC_SUPABASE_URL` before assuming that, though: running a
+   migration against a second project looks identical from the outside.
+4. Only if you are setting `REQUIRE_LOGIN=true`: go to Authentication, then
+   Users, and add yourself with an email and password. There is no public
+   signup form by design, since this is a single owner operated dashboard,
+   not a multi user product. Skip this while the dashboard is open.
 5. Go to the Table Editor, open the instructors table, and add at least
    one row (name, email, phone) so you have someone to assign lessons to
    from the dashboard. There is deliberately no instructor management
    screen in version one, add and edit instructors directly here for now.
+   `scripts/seed-demo.mjs` creates instructors for you if you are running
+   this as a demo.
 
 ## 3. Run it locally
 
@@ -39,9 +61,9 @@ npm install
 npm run dev
 ```
 
-Visit `http://localhost:3000` for the public page, `/book` for the
-booking form, and `/dashboard/login` to sign in with the user you created
-in step 2.
+Visit `http://localhost:3000` for the public page, `/book` for the booking
+form, and `/dashboard` for the owner dashboard, which opens straight up
+unless you have set `REQUIRE_LOGIN=true`.
 
 ## 4. Deploy
 
@@ -52,8 +74,14 @@ around, but it must not be handed to learners yet.
 
 ### 4a. Push the code
 
-1. `git init && git add . && git commit -m "Initial commit"`.
-2. Create an empty repository on GitHub and push to it.
+Already done for this project: it lives at
+https://github.com/Azamann01/driving_sch and Vercel rebuilds on every push
+to `main`. Starting fresh elsewhere, it is `git init`, a commit, an empty
+GitHub repository, and a push.
+
+Note that `git status` showing "up to date" is not proof a push reached
+GitHub; the remote tracking ref is local bookkeeping and can get ahead of
+reality. The output of `git push` is the reliable signal.
 
 ### 4b. Create the Vercel project
 
@@ -87,6 +115,13 @@ around, but it must not be handed to learners yet.
 
 There is no variable to set for the dashboard login, because there isn't
 one by default. See "Running it as a demo" below.
+
+Two things about Vercel variables that are easy to lose an afternoon to.
+They only take effect on a **new build**, so adding one does nothing to a
+deployment that is already built; redeploy afterwards. And a variable has
+to be ticked for **Production** specifically, or production simply never
+receives it. `/api/health` shows which ones actually arrived, which settles
+"I set it but nothing changed" in one request instead of a deploy cycle.
 
 ### 4d. Point Stripe at the deployed webhook
 
@@ -145,8 +180,18 @@ Staging is fine without these. A public, customer facing site is not.
 - **Move off the Vercel Hobby plan.** It is explicitly for personal, non
   commercial use, so a live driving school site needs Pro, currently 20 US
   dollars a month.
-- **Replace the password login.** Owner sign in is still email and
-  password; Google sign in plus an email allowlist was the plan.
+- **Set `REQUIRE_LOGIN=true`.** Without it there is no login at all and
+  every learner's name, phone, email and postcode is public. This is the
+  one that matters most the moment real people are in the database.
+- **Run the reminder migration and add Twilio credentials** if you want
+  lesson reminders. The button is built and reports its own failures, but
+  does nothing until `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and
+  `TWILIO_FROM_NUMBER` exist.
+
+Google sign in with an email allowlist was built and then removed, because
+the deployment became a showcase where a login defeats the point. The
+password login is what remains. If you want passwordless later, that work
+is in the history rather than lost.
 
 ## Two things worth knowing before launch
 
@@ -157,22 +202,41 @@ a central London postcode returns 4.8 miles and is covered, Edinburgh
 returns 326.7 miles and is not, and an invalid postcode is rejected with
 a clear message.
 
-The dashboard's login protection (`proxy.ts`) checks your session with
-Supabase on every dashboard request, which is the pattern Supabase's own
-Next.js integration recommends because it also refreshes your session
-cookie. Next.js's own newer guidance favours a lighter, cookie only check
-in Proxy for high traffic sites. At the scale of a single school's
-dashboard this is not a real concern, it is just worth knowing if this
-ever becomes a busier, multi school product later.
+Under `REQUIRE_LOGIN`, the dashboard's protection (`proxy.ts`) checks your
+session with Supabase on every dashboard request, which is the pattern
+Supabase's own Next.js integration recommends because it also refreshes
+your session cookie. Next.js's own newer guidance favours a lighter, cookie
+only check in Proxy for high traffic sites. At the scale of a single
+school's dashboard this is not a real concern, it is just worth knowing if
+this ever becomes a busier, multi school product later.
 
-## What is deliberately not built yet
+With the dashboard open, there is no session, so row level security would
+refuse every query. `lib/supabase/server.ts` falls back to the service role
+key in that case. The key stays server side, but it is the reason an open
+dashboard must only ever hold fictional data: it can read and write
+everything.
 
-Automatic payment links, SMS reminders, live self service instructor
-calendars, and multi instructor support are all phase two and three, not
-version one. Outstanding payments and booking status are updated with a
-manual toggle in the dashboard for now. See the roadmap section of
-`driving_school_platform_plan.md` for the reasoning and the order this is
-meant to be tackled in.
+## What is built, and what is not
+
+Built beyond the version one core:
+
+- **Stripe payment links.** Generate one per booking from the payments page;
+  a webhook marks the booking and payment row paid when the customer pays,
+  and revalidates the dashboard so it does not serve a stale page. Verified
+  end to end against a real sandbox payment. Still on sandbox keys.
+- **Confirmation emails** through Resend, on enquiry and on booking. Sending
+  is best effort: a failure is logged and the enquiry or booking still
+  saves, because losing a booking to a bounced email would be far worse.
+  Lesson times are pinned to `Europe/London`, since the server runs UTC and
+  would otherwise tell learners to turn up an hour early all summer.
+- **SMS lesson reminders** through Twilio, sent by hand from the lessons
+  page rather than on a schedule, with the page flagging which lessons fall
+  within 24 hours and within 2 hours. Needs credentials before it will send.
+
+Still not built: live self service booking against instructor calendars,
+multi instructor support, and automatic waiting list notifications. Booking
+status and payment status are still manual toggles. See the roadmap in
+`driving_school_platform_plan.md` for the order these are meant to come in.
 
 One thing this platform will never do: book a DVSA practical test on a
 learner's behalf. As of April 2026, DVSA rules make that the learner's
