@@ -96,7 +96,7 @@ export default async function EnquiriesPage() {
                       name="instructorId"
                       required
                       defaultValue=""
-                      className="mt-1 w-full rounded-md border border-zinc-300 px-2 py-2.5 text-base sm:w-auto sm:py-1.5 sm:text-sm"
+                      className="mt-1 w-full rounded-md border border-zinc-300 px-2 py-3 text-base sm:w-auto sm:py-1.5 sm:text-sm"
                     >
                       <option value="" disabled>
                         Choose
@@ -120,7 +120,7 @@ export default async function EnquiriesPage() {
                       type="datetime-local"
                       name="startTime"
                       required
-                      className="mt-1 w-full rounded-md border border-zinc-300 px-2 py-2.5 text-base sm:w-auto sm:py-1.5 sm:text-sm"
+                      className="mt-1 w-full rounded-md border border-zinc-300 px-2 py-3 text-base sm:w-auto sm:py-1.5 sm:text-sm"
                     />
                   </div>
                   <SubmitButton
